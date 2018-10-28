@@ -7,7 +7,12 @@
 "               using the mouse.
 "
 " Tutorial version: 2003-10-02
-"
+
+if v:version < 700
+   " Won't support Vim 6 with this version any more.
+   finish
+endif
+
 " Usage and settings
 " ------------------
 " See the file sketch.tut for a tutorial. There isn't a help file yet.
@@ -167,7 +172,7 @@ fun! MarkVisEnd()
    endif
    normal! gv
    let b:Vis_end_line = line(".")
-   let b:Vis_end_col = virtcol(".")
+   let b:Vis_end_col = virtcol(".") - (&selection ==# 'exclusive' ? 1 : 0)
    normal! 
    return ''
 endfun
@@ -218,7 +223,7 @@ fun! Sketch()
    vnoremap <buffer> <silent> <RightDrag> <LeftDrag>
    vnoremap <buffer> <silent> <RightRelease> <LeftMouse>:call SketchSavePos('auto')<CR>gv
    "The gv"ap at the end prevents flicker when M-RightDrag does the undo.
-   vnoremap <buffer> <silent> <S-RightMouse> <LeftMouse>:call VisSaveDims()<CR>gv"pygv"pp:let b:above = @p<CR>
+   vnoremap <buffer> <silent> <S-RightMouse> <LeftMouse>:call VisSaveDims()<CR>:call CaptureSelection()<CR>
    nnoremap <buffer> <silent> <S-RightDrag> u<LeftMouse>:call VisWithSavedDims()<CR>"pp
    nnoremap <buffer> <silent> <RightDrag> u<LeftMouse>:call VisWithSavedDims()<CR>:call PasteTransparent()<CR>:call VisWithSavedDims()<CR>"pp
 
@@ -227,9 +232,9 @@ fun! Sketch()
    nnoremap <buffer> <silent> <C-RightDrag> <LeftMouse>:call SketchErase('small')<CR>
    nnoremap <buffer> <silent> <M-RightMouse> <LeftMouse>:call SketchErase('big')<CR>
    nnoremap <buffer> <silent> <M-RightDrag> <LeftMouse>:call SketchErase('big')<CR>
-   vnoremap <buffer> <silent> <RightMouse> <LeftMouse>:call VisSaveDims()<CR>gv"pygv"pp:let b:above = @p<CR>gv:call SketchErase('vblock')<CR><LeftMouse>
+   vnoremap <buffer> <silent> <RightMouse> <LeftMouse>:call VisSaveDims()<CR>:call CaptureSelection()<CR>gv:call SketchErase('vblock')<CR><LeftMouse>
 "    vnoremap <buffer> <silent> <RightMouse> <LeftMouse>:call VisSaveDims()<CR>gv"py:let b:above = @p<CR>gv:call SketchErase('vblock')<CR><LeftMouse>
-   vnoremap <buffer> <silent> <2-RightMouse> <LeftMouse>:call VisSaveDims()<CR>gv"pygv"pp:let b:above = @p<CR>gv:call SketchErase('vblock')<CR><LeftMouse>
+   vnoremap <buffer> <silent> <2-RightMouse> <LeftMouse>:call VisSaveDims()<CR>:call CaptureSelection()<CR>gv:call SketchErase('vblock')<CR><LeftMouse>
    "vnoremap <buffer> <silent> <RightMouse> :call SketchErase('vblock')<CR><LeftMouse>
 
    "Fill
@@ -269,6 +274,11 @@ fun! s:Detab(str, ts, offset)
    return str
 endfun
 
+fun! CaptureSelection() range
+   normal! gv"py
+   let b:above = @p
+endfun
+
 fun! PasteTransparent() range
    normal! gv"oy
    let above = b:above
@@ -296,9 +306,16 @@ fun! PasteTransparent() range
    "normal! ms
    let pos = SavePos(0)
    $ put p
-   "Need the zero. If @p has leading spaces, cursor will be on first non-blank
-   "of the line.
-   normal! 0G$h"pydG
+   normal! `[
+   let saved_selection = &selection
+   set selection=inclusive
+   try
+      "Need the zero. If @p has leading spaces, cursor will be on first non-blank
+      "of the line.
+      normal! 0G$h"pydG
+   finally
+      let &selection = saved_selection
+   endtry
    exe pos
 endfun
 
@@ -456,7 +473,8 @@ fun! SketchFillBox(style) range
       "calling cursor()
       normal! l
       call Cursor(top,left)
-      let n = (right-left-2)==0 ? '' : (right-left-2).'l'
+      let num = (right-left-2) + (&selection ==# 'exclusive' ? 1 : 0)
+      let n = num==0 ? '' : num.'l'
       exe 'normal! llh'.n.'r-'
       normal! l
       call Cursor(bot,left)
