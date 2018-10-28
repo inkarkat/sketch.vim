@@ -180,6 +180,8 @@ fun! Sketch()
    let b:Sketch_col = 0
    let b:Sketch_savedguiopts = &go
    let b:Sketch_savedmousemodel = &mousemodel
+   let b:Sketch_savedlz = &lz
+   let b:Sketch_savedreport = &report
    set mousemodel=
    let b:Vis_start_line = 0
    let b:Vis_start_col = 0
@@ -190,6 +192,8 @@ fun! Sketch()
    let b:roundcorners = 0
    set go+=rb
    setl ve=all
+   set lz
+   set report=999
 
 
    "Lines
@@ -337,6 +341,8 @@ endfun
 fun! NoSketch()
    let &go = b:Sketch_savedguiopts
    let &mousemodel = b:Sketch_savedmousemodel
+   let &lz = b:Sketch_savedlz
+   let &report = b:Sketch_savedreport
    setl ve=
    nunmap <buffer> <LeftMouse>
    nunmap <buffer> <LeftDrag>
